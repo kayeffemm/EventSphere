@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from database import Base
 import uuid
 
+
 class Artist(Base):
     __tablename__ = "artists"
 
