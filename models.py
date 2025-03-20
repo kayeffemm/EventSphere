@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, UUID, ForeignKey, TIMESTAMP, func
+from sqlalchemy import Column, String, UUID, ForeignKey, TIMESTAMP, func, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 import uuid
@@ -45,6 +45,7 @@ class User(Base):
     interests = relationship("Interest", back_populates="user")
     saved_events = relationship("SavedEvent", back_populates="user")
 
+    __table_args__ = (UniqueConstraint("email", name="unique_user_email"),)
 
 class Interest(Base):
     __tablename__ = "interests"
