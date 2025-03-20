@@ -3,15 +3,24 @@ import models
 import schemas
 import uuid
 from uuid import UUID
+from auth import hash_password
 
 
 # User CRUD
-def create_user(db: Session, user: schemas.UserCreate):
-    db_user = models.User(id=uuid.uuid4(), **user.model_dump())
-    db.add(db_user)
+def create_user(db: Session, user_data: schemas.UserCreate):
+    """Handles user creation, including password hashing."""
+    hashed_pw = hash_password(user_data.password)
+    new_user = models.User(
+        id=uuid.uuid4(),
+        name=user_data.name,
+        email=user_data.email,
+        password=hashed_pw
+    )
+
+    db.add(new_user)
     db.commit()
-    db.refresh(db_user)
-    return db_user
+    db.refresh(new_user)
+    return new_user
 
 
 def get_users(db: Session):
