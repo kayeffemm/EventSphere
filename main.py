@@ -1,14 +1,18 @@
 import models, schemas, database_handler
 from discoveryapi import search_artist, get_upcoming_events
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db, Base, engine
 from uuid import UUID
+from auth import hash_password, verify_password, create_access_token, verify_access_token
+from datetime import timedelta
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 # Initialize the database
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 @app.get("/")
@@ -16,12 +20,41 @@ def read_root():
     return {"message": "Welcome to EventSphere API"}
 
 
+@app.post("/signup", response_model=schemas.UserResponse)
+def signup(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+    """Registers a new user using the database_handler function."""
+    existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+    return database_handler.create_user(db, user_data)
+
+
+@app.post("/login", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    # Generate JWT token
+    access_token = create_access_token({"sub": str(user.id)}, timedelta(minutes=60))
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/me", response_model=schemas.UserResponse)
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = verify_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user_id = payload.get("sub")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+
 # User Endpoints
-@app.post("/users/", response_model=schemas.UserResponse)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    return database_handler.create_user(db, user)
-
-
 @app.get("/users/", response_model=list[schemas.UserResponse])
 def list_users(db: Session = Depends(get_db)):
     return database_handler.get_users(db)
@@ -94,7 +127,7 @@ def create_saved_event(saved_event: schemas.SavedEventCreate, db: Session = Depe
 def list_saved_events(db: Session = Depends(get_db)):
     return database_handler.get_saved_events(db)
 
-#TODO: Get this working
+#TODO: filter results, add artist search based on location
 @app.get("/artists/search/{artist_name}")
 def find_artist(artist_name: str):
     """Search for an artist on Ticketmaster."""
