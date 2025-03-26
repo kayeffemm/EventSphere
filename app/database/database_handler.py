@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-import models
-import schemas
+from app.models import models
+from app.schemas import schemas
 import uuid
 from uuid import UUID
-from auth import hash_password
+from app.auth import hash_password
 
 
 # User CRUD

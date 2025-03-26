@@ -1,12 +1,16 @@
-import models, schemas, database_handler
-from discoveryapi import search_artist, get_upcoming_events
 from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from database import get_db, Base, engine
-from uuid import UUID
-from auth import hash_password, verify_password, create_access_token, verify_access_token
-from datetime import timedelta
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from uuid import UUID
+from datetime import timedelta
+
+from app.models import models
+from app.schemas import schemas
+from app.database import database_handler
+from app.database.database import get_db, Base, engine
+from app.services.discoveryapi import search_artist, get_upcoming_events
+from app.auth import hash_password, verify_password, create_access_token, verify_access_token
+
 
 # Initialize the database
 Base.metadata.create_all(bind=engine)
