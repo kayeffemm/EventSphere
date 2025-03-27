@@ -19,6 +19,21 @@ app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
+    print("Received token:", token)  #TODO only for debugging, remove later
+
+    payload = verify_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user_id = payload.get("sub")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    return user
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to EventSphere API"}
@@ -46,16 +61,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @app.get("/me", response_model=schemas.UserResponse)
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = verify_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    user_id = payload.get("sub")
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user
+def get_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
 
 
 # User Endpoints
@@ -112,24 +119,41 @@ def list_events(db: Session = Depends(get_db)):
 
 # Interest Endpoints
 @app.post("/interests/", response_model=schemas.InterestResponse)
-def create_interest(interest: schemas.InterestCreate, db: Session = Depends(get_db)):
+def create_interest(
+    interest: schemas.InterestCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Override interest.user_id to prevent spoofing
+    interest.user_id = current_user.id
     return database_handler.create_interest(db, interest)
 
 
 @app.get("/interests/", response_model=list[schemas.InterestResponse])
-def list_interests(db: Session = Depends(get_db)):
-    return database_handler.get_interests(db)
+def list_interests(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return database_handler.get_interests_for_user(db, current_user.id)
 
 
 # Saved Event Endpoints
 @app.post("/saved_events/", response_model=schemas.SavedEventResponse)
-def create_saved_event(saved_event: schemas.SavedEventCreate, db: Session = Depends(get_db)):
+def create_saved_event(
+    saved_event: schemas.SavedEventCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    saved_event.user_id = current_user.id
     return database_handler.create_saved_event(db, saved_event)
 
 
 @app.get("/saved_events/", response_model=list[schemas.SavedEventResponse])
-def list_saved_events(db: Session = Depends(get_db)):
-    return database_handler.get_saved_events(db)
+def list_saved_events(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return database_handler.get_saved_events_for_user(db, current_user.id)
 
 #TODO: filter results, add artist search based on location
 @app.get("/artists/search/{artist_name}")

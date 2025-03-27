@@ -82,25 +82,55 @@ def get_events(db: Session):
 
 
 # Interest CRUD
-def create_interest(db: Session, interest: schemas.InterestCreate):
-    db_interest = models.Interest(id=uuid.uuid4(), **interest.model_dump())
-    db.add(db_interest)
+def create_interest(db: Session, interest_data: schemas.InterestCreate):
+    existing = db.query(models.Interest).filter_by(
+        user_id=interest_data.user_id,
+        artist_id=interest_data.artist_id
+    ).first()
+
+    if existing:
+        return existing
+
+    new_interest = models.Interest(
+        user_id=interest_data.user_id,
+        artist_id=interest_data.artist_id
+    )
+    db.add(new_interest)
     db.commit()
-    db.refresh(db_interest)
-    return db_interest
+    db.refresh(new_interest)
+    return new_interest
 
 
 def get_interests(db: Session):
     return db.query(models.Interest).all()
 
 
+def get_interests_for_user(db: Session, user_id: UUID):
+    return db.query(models.Interest).filter(models.Interest.user_id == user_id).all()
+
+
 # SavedEvent CRUD
-def create_saved_event(db: Session, saved_event: schemas.SavedEventCreate):
-    db_saved_event = models.SavedEvent(id=uuid.uuid4(), **saved_event.model_dump())
-    db.add(db_saved_event)
+def get_saved_events_for_user(db: Session, user_id: UUID):
+    return db.query(models.SavedEvent).filter(models.SavedEvent.user_id == user_id).all()
+
+
+def create_saved_event(db: Session, saved_event_data: schemas.SavedEventCreate):
+    existing = db.query(models.SavedEvent).filter_by(
+        user_id=saved_event_data.user_id,
+        event_id=saved_event_data.event_id
+    ).first()
+
+    if existing:
+        return existing
+
+    new_saved_event = models.SavedEvent(
+        user_id=saved_event_data.user_id,
+        event_id=saved_event_data.event_id
+    )
+    db.add(new_saved_event)
     db.commit()
-    db.refresh(db_saved_event)
-    return db_saved_event
+    db.refresh(new_saved_event)
+    return new_saved_event
 
 
 def get_saved_events(db: Session):
