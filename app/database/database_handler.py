@@ -135,3 +135,29 @@ def create_saved_event(db: Session, saved_event_data: schemas.SavedEventCreate):
 
 def get_saved_events(db: Session):
     return db.query(models.SavedEvent).all()
+
+
+def get_or_create_artist_by_ticketmaster_data(db: Session, artist_data: dict):
+    """
+    Check if artist exists in DB by Ticketmaster ID.
+    If not, create and return it.
+    """
+    ticketmaster_id = artist_data.get("id")
+    name = artist_data.get("name")
+
+    if not ticketmaster_id or not name:
+        return None
+
+    existing = db.query(models.Artist).filter_by(ticketmaster_id=ticketmaster_id).first()
+    if existing:
+        return existing
+
+    new_artist = models.Artist(
+        id=uuid.uuid4(),
+        name=name,
+        ticketmaster_id=ticketmaster_id
+    )
+    db.add(new_artist)
+    db.commit()
+    db.refresh(new_artist)
+    return new_artist
