@@ -33,15 +33,36 @@ def search_artist(artist_name: str):
 
 
 def get_upcoming_events(artist_id: str):
-    """Fetch upcoming events for an artist."""
+    """Fetch and clean upcoming events for an artist from Ticketmaster."""
     url = f"{BASE_URL}/events.json"
     params = {
         "apikey": TICKETMASTER_API_KEY,
         "attractionId": artist_id
     }
     response = requests.get(url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("_embedded", {}).get("events", [])
-    else:
+    if response.status_code != 200:
         return None
+
+    data = response.json()
+    raw_events = data.get("_embedded", {}).get("events", [])
+
+    cleaned_events = []
+    for event in raw_events:
+        cleaned_event = {
+            "id": event.get("id"),
+            "name": event.get("name"),
+            "date": event.get("dates", {}).get("start", {}).get("dateTime"),
+            "ticket_url": event.get("url"),
+        }
+
+        # Build location string
+        venue = event.get("_embedded", {}).get("venues", [{}])[0]
+        city = venue.get("city", {}).get("name", "")
+        country = venue.get("country", {}).get("name", "")
+        venue_name = venue.get("name", "")
+        location = f"{venue_name}, {city}, {country}".strip(", ")
+
+        cleaned_event["location"] = location
+        cleaned_events.append(cleaned_event)
+
+    return cleaned_events
