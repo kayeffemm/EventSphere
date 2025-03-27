@@ -172,3 +172,34 @@ def find_events(artist_id: str):
     if not events:
         return {"message": "No events found"}
     return events
+
+
+@app.post("/follow_artist/{artist_name}", response_model=schemas.ArtistResponse)
+def follow_artist(
+    artist_name: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Step 1: Search artist using Ticketmaster API
+    results = search_artist(artist_name)
+    if not results:
+        raise HTTPException(status_code=404, detail="Artist not found")
+
+    # Just take the first result for now (you can later allow user to choose)
+    artist_data = results[0]
+
+    # Step 2: Save artist to DB if not already there
+    artist = database_handler.get_or_create_artist_by_ticketmaster_data(db, artist_data)
+
+    # Step 3: Check if user already follows this artist
+    interest_exists = db.query(models.Interest).filter_by(
+        user_id=current_user.id,
+        artist_id=artist.id
+    ).first()
+
+    if not interest_exists:
+        new_interest = models.Interest(user_id=current_user.id, artist_id=artist.id)
+        db.add(new_interest)
+        db.commit()
+
+    return artist
