@@ -4,6 +4,7 @@ from app.schemas import schemas
 import uuid
 from uuid import UUID
 from app.auth import hash_password
+from datetime import datetime
 
 
 # User CRUD
@@ -161,3 +162,51 @@ def get_or_create_artist_by_ticketmaster_data(db: Session, artist_data: dict):
     db.commit()
     db.refresh(new_artist)
     return new_artist
+
+def get_or_create_event_by_ticketmaster_data(
+    db: Session,
+    artist_id: uuid.UUID,
+    event_data: dict,
+) -> models.Event:
+    """
+    Given an artist_id and a dict with Ticketmaster event fields:
+      - id (ticketmaster_id)
+      - name
+      - date (ISO string)
+      - location
+      - ticket_url
+    either return the existing Event or create & return a new one.
+    """
+    tm_id = event_data.get("id")
+    if not tm_id:
+        return None
+
+    # Look for an existing record
+    existing = (
+        db.query(models.Event)
+          .filter_by(ticketmaster_id=tm_id)
+          .first()
+    )
+    if existing:
+        return existing
+
+    # Parse ISO date string into a datetime, if provided
+    date_str = event_data.get("date")
+    event_datetime = None
+    if date_str:
+        event_datetime = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+
+    # Create a new Event
+    new_event = models.Event(
+        id=uuid.uuid4(),
+        ticketmaster_id=tm_id,
+        artist_id=artist_id,
+        name=event_data.get("name"),
+        date=event_datetime,
+        location=event_data.get("location"),
+        ticket_url=event_data.get("ticket_url"),
+    )
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
+    return new_event
