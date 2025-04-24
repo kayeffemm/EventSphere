@@ -199,3 +199,42 @@ def follow_artist(
         db.commit()
 
     return artist
+
+
+@app.post("/sync_events/{artist_id}", response_model=list[schemas.EventResponse])
+def sync_events(
+    artist_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Verify the user follows this artist
+    interest = (
+        db.query(models.Interest)
+          .filter_by(user_id=current_user.id, artist_id=artist_id)
+          .first()
+    )
+    if not interest:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You must follow this artist before syncing events"
+        )
+
+    # Load the artist from the DB
+    artist = db.query(models.Artist).filter_by(id=artist_id).first()
+    if not artist:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artist not found")
+
+    # Fetch & clean events via your Discovery API
+    raw_events = get_upcoming_events(artist.ticketmaster_id)
+    if not raw_events:
+        return []
+
+    # Persist each event (get_or_create helper)
+    synced_events = []
+    for ev_data in raw_events:
+        ev = database_handler.get_or_create_event_by_ticketmaster_data(
+            db, artist.id, ev_data
+        )
+        synced_events.append(ev)
+
+    return synced_events
