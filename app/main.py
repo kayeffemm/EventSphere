@@ -238,3 +238,23 @@ def sync_events(
         synced_events.append(ev)
 
     return synced_events
+
+
+@app.get("/artists/{artist_id}/events", response_model=list[schemas.EventResponse])
+def list_stored_events(
+    artist_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    interest = (
+        db.query(models.Interest)
+          .filter_by(user_id=current_user.id, artist_id=artist_id)
+          .first()
+    )
+    if not interest:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must follow this artist to view its events"
+        )
+
+    return database_handler.get_events_for_artist(db, artist_id)
