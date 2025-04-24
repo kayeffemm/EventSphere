@@ -163,6 +163,7 @@ def get_or_create_artist_by_ticketmaster_data(db: Session, artist_data: dict):
     db.refresh(new_artist)
     return new_artist
 
+
 def get_or_create_event_by_ticketmaster_data(
     db: Session,
     artist_id: uuid.UUID,
@@ -210,3 +211,11 @@ def get_or_create_event_by_ticketmaster_data(
     db.commit()
     db.refresh(new_event)
     return new_event
+
+
+def get_events_for_artist(db: Session, artist_id: UUID):
+    return (
+        db.query(models.Event)
+          .filter(models.Event.artist_id == artist_id)
+          .all()
+    )
