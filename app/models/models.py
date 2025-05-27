@@ -11,6 +11,7 @@ class Artist(Base):
     name = Column(String(100), nullable=False)
     ticketmaster_id = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, nullable=False, default=func.now(), server_default=func.now())
+    last_synced_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
     events = relationship("Event", back_populates="artist")
     interests = relationship("Interest", back_populates="artist")
