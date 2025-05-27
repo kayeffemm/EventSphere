@@ -10,28 +10,23 @@ class UserBase(BaseModel):
     email: EmailStr
     location: Optional[str] = None
 
-
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
 
-
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
-
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     location: Optional[str] = None
-
 
 class UserResponse(UserBase):
     id: UUID
@@ -46,10 +41,12 @@ class ArtistBase(BaseModel):
     name: str
     ticketmaster_id: Optional[str] = None
 
-
 class ArtistCreate(ArtistBase):
     pass
 
+class ArtistUpdate(BaseModel):
+    name: Optional[str] = None
+    ticketmaster_id: Optional[str] = None
 
 class ArtistResponse(ArtistBase):
     id: UUID
@@ -67,10 +64,15 @@ class EventBase(BaseModel):
     location: Optional[str] = None
     ticket_url: Optional[str] = None
 
-
 class EventCreate(EventBase):
     artist_id: UUID
 
+class EventUpdate(BaseModel):
+    name: Optional[str] = None
+    ticketmaster_id: Optional[str] = None
+    date: Optional[datetime] = None
+    location: Optional[str] = None
+    ticket_url: Optional[str] = None
 
 class EventResponse(EventBase):
     id: UUID
@@ -86,10 +88,12 @@ class InterestBase(BaseModel):
     user_id: UUID
     artist_id: UUID
 
-
 class InterestCreate(InterestBase):
     pass
 
+class InterestUpdate(BaseModel):
+    # no fields to update here yet
+    pass
 
 class InterestResponse(InterestBase):
     id: UUID
@@ -104,10 +108,12 @@ class SavedEventBase(BaseModel):
     user_id: UUID
     event_id: UUID
 
-
 class SavedEventCreate(SavedEventBase):
     pass
 
+class SavedEventUpdate(BaseModel):
+    # no fields to update here yet
+    pass
 
 class SavedEventResponse(SavedEventBase):
     id: UUID
