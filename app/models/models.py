@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, UUID, ForeignKey, TIMESTAMP, func, UniqueConstraint
+from sqlalchemy import Column, String, UUID, ForeignKey, TIMESTAMP, func, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship
 from app.database.database import Base
 import uuid
@@ -42,6 +42,7 @@ class User(Base):
     password = Column(String, nullable=False)
     location = Column(String(100), nullable=True)
     created_at = Column(TIMESTAMP, nullable=False, default=func.now(), server_default=func.now())
+    is_admin = Column(Boolean, nullable=False, default=False)
 
     interests = relationship("Interest", back_populates="user")
     saved_events = relationship("SavedEvent", back_populates="user")
